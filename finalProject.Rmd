@@ -14,21 +14,76 @@ head
 ```{r}
 
 #install.packages("freqparcoord")
-#install.packages("GGally")
+#install.packages("regclass")
 library(freqparcoord)
+library(dplyr)
+library(car)
 data(prgeng)
 head(prgeng)
+
 ```
 
 
 initial model with all variables
 
 ```{r}
-bigmodel<-lm(wageinc~age+ educ+engl+occ+birth+factor(sex)+wageinc+wkswrkd+yrentry+powspuma, data =prgeng)
-summary(bigmodel)
+bigmodel<-lm(wageinc~age+ educ+engl+occ+birth+factor(sex)+wkswrkd+yrentry+powspuma+cit, data =prgeng)
+sumBig<-summary(bigmodel)
+sumBig
 ```
-wihtout birth 
+
 ```{r}
-nobirth<-lm(wageinc~age+ educ+engl+occ+sex+wageinc+wkswrkd+yrentry+powspuma, data =prgeng)
-summary(nobirth)
+anova(bigmodel)
 ```
+vif score
+```{r}
+vifScor<-1/sumBig$adj.r.squared
+```
+
+
+vif 
+```{r}
+vifs<-vif(bigmodel)
+vifs
+```
+
+These three have multicollinearity lets kick them and test 
+```{r}
+high_vif_vars <- names(vifs[vifs > vifScor])
+high_vif_vars
+```
+
+get rid of birth and cit
+```{r}
+reducedCit<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+cit, data =prgeng)
+reducedBirth<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+birth, data =prgeng)
+reducedEntry<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+yrentry, data =prgeng)
+reducedEntryCit<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+yrentry+cit, data =prgeng)
+reducedEntryBirth<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+yrentry+birth, data =prgeng)
+reducedBirthCit<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+cit+birth, data =prgeng)
+```
+
+
+```{r}
+vifreducedCit<-vif(reducedCit)
+vifreducedCit
+```
+
+```{r}
+vifreducedBirth<-vif(reducedBirth)
+vifreducedBirth
+```
+
+```{r}
+vifreducedEntry<-vif(reducedEntry)
+vifreducedEntry
+```
+
+Looking at different combos and individual predictors, birth seems to be the best of 3 multicollinear variables to keep.
+
+```{r}
+f_test_result <- anova(reducedBirth,bigmodel)
+f_test_result
+```
+
+Model is singificantly improved
