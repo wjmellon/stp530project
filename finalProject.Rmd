@@ -9,12 +9,26 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+head
 ```{r}
 
-install.packages("freqparcoord")
-install.packages("GGally")
+#install.packages("freqparcoord")
+#install.packages("GGally")
 library(freqparcoord)
 data(prgeng)
+head(prgeng)
 ```
 
-hello
+
+initial model with all variables
+
+```{r}
+bigmodel<-lm(wageinc~age+ educ+engl+occ+birth+factor(sex)+wageinc+wkswrkd+yrentry+powspuma, data =prgeng)
+summary(bigmodel)
+```
+wihtout birth 
+```{r}
+nobirth<-lm(wageinc~age+ educ+engl+occ+sex+wageinc+wkswrkd+yrentry+powspuma, data =prgeng)
+summary(nobirth)
+```
