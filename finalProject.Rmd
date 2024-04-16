@@ -24,6 +24,16 @@ head(prgeng)
 ```
 
 
+correlation matrix
+```{r}
+cor(prgeng)
+```
+High correlations between cit, birth, and yrentry
+```{r}
+pairs(prgeng)
+```
+
+
 initial model with all variables
 
 ```{r}
@@ -35,10 +45,7 @@ sumBig
 ```{r}
 anova(bigmodel)
 ```
-vif score
-```{r}
-vifScor<-1/sumBig$adj.r.squared
-```
+
 
 
 vif 
@@ -49,35 +56,22 @@ vifs
 
 These three have multicollinearity lets kick them and test 
 ```{r}
-high_vif_vars <- names(vifs[vifs > vifScor])
+high_vif_vars <- names(vifs[vifs > 10])
 high_vif_vars
 ```
 
-get rid of birth and cit
+get rid of yrentry and cit
 ```{r}
-reducedCit<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+cit, data =prgeng)
 reducedBirth<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+birth, data =prgeng)
-reducedEntry<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+yrentry, data =prgeng)
-reducedEntryCit<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+yrentry+cit, data =prgeng)
-reducedEntryBirth<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+yrentry+birth, data =prgeng)
-reducedBirthCit<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+cit+birth, data =prgeng)
+summary(reducedBirth)
 ```
 
-
-```{r}
-vifreducedCit<-vif(reducedCit)
-vifreducedCit
-```
 
 ```{r}
 vifreducedBirth<-vif(reducedBirth)
 vifreducedBirth
 ```
 
-```{r}
-vifreducedEntry<-vif(reducedEntry)
-vifreducedEntry
-```
 
 Looking at different combos and individual predictors, birth seems to be the best of 3 multicollinear variables to keep.
 
@@ -86,4 +80,3 @@ f_test_result <- anova(reducedBirth,bigmodel)
 f_test_result
 ```
 
-Model is singificantly improved
