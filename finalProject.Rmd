@@ -5,12 +5,14 @@ date: "2024-04-04"
 output: pdf_document
 ---
 
+as levels:engl, powspuma. lets only select silicon valley zip codes. powspuma levels in counties. powspuma is just some code for census purposes that we dont have access to
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-head
+
 ```{r}
 
 #install.packages("freqparcoord")
@@ -18,16 +20,46 @@ head
 library(freqparcoord)
 library(dplyr)
 library(car)
+library(ggplot2)
+library(zipcodeR)
+library(stringr)
+
 data(prgeng)
 head(prgeng)
 
-```
+prgeng <- prgeng[str_detect(prgeng$powspuma, "^6"), ]
+prgeng <- prgeng[prgeng$wageinc != 0, ]
 
 
-correlation matrix
-```{r}
-cor(prgeng)
+
+# Recoding 'educ' into three categories
+prgeng$educ <- ifelse(prgeng$educ >= 10 & prgeng$educ <= 13, 1, 
+                     ifelse(prgeng$educ > 13, 2, 0))
+
+# Recoding 'yrentry' as specified
+# Assuming yrentry is numeric and contains the actual year of entry or 0 for native
+# Convert the recoded variables to factors if necessary
+prgeng$cit <- as.factor(prgeng$cit)
+prgeng$educ <- as.factor(prgeng$educ)
+prgeng$occ <- as.factor(prgeng$occ)
+
+#yrentry
+prgeng$occ <- as.factor(prgeng$occ)
+prgeng$birth <- ifelse(prgeng$birth == 1, 1, 2)
+
+# Convert 'birth' to a factor with two levels since theres over 100 different places 
+prgeng$birth <- factor(prgeng$birth, levels = c(1, 2), labels = c("1", "2"))
+
+prgeng$yrentry <- ifelse(prgeng$yrentry == 0, prgeng$age, 2000-prgeng$yrentry)
+
+head(prgeng)
+
 ```
+mess with engl
+
+
+
+
 High correlations between cit, birth, and yrentry
 ```{r}
 pairs(prgeng)
@@ -37,7 +69,7 @@ pairs(prgeng)
 initial model with all variables
 
 ```{r}
-bigmodel<-lm(wageinc~age+ educ+engl+occ+birth+factor(sex)+wkswrkd+yrentry+powspuma+cit, data =prgeng)
+bigmodel<-lm(wageinc~age+ educ+occ+birth+sex+wkswrkd+yrentry+cit, data =prgeng)
 sumBig<-summary(bigmodel)
 sumBig
 ```
@@ -56,27 +88,89 @@ vifs
 
 These three have multicollinearity lets kick them and test 
 ```{r}
-high_vif_vars <- names(vifs[vifs > 10])
+high_vif_vars <-vifs[vifs$GVIF > 10])
 high_vif_vars
 ```
 
 get rid of yrentry and cit
 ```{r}
-reducedBirth<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+birth, data =prgeng)
-summary(reducedBirth)
+reducedBirth<-lm(wageinc~age+ educ+occ+sex+wkswrkd+birth+cit, data =prgeng)
+summary(reduced)
 ```
 
 
 ```{r}
-vifreducedBirth<-vif(reducedBirth)
-vifreducedBirth
+vifreduced<-vif(reduced)
+vifreduced
 ```
 
 
 Looking at different combos and individual predictors, birth seems to be the best of 3 multicollinear variables to keep.
 
 ```{r}
-f_test_result <- anova(reducedBirth,bigmodel)
+f_test_result <- anova(reduced,bigmodel)
 f_test_result
 ```
+residual plots
+```{r}
+residualPlots(reduced, type="rstandard")
+```
+
+
+```{r}
+residualPlots(reduced, ~1, type="rstudent",
+id=list(labels=prgeng$age))
+```
+
+qqplot
+```{r}
+qqPlot(reduced)
+```
+cook's d
+```{r}
+influencePlot(reduced, id=list(labels=row.names(prgeng)))
+```
+
+```{r}
+ind <- prgeng %>% 
+  filter(row.names(prgeng) == "4677")
+ind
+
+ind <- prgeng %>% 
+  filter(wageinc > 300000)
+ind
+
+```
+
+```{r}
+influenceIndexPlot(reduced, vars=c("Studentized","hat","Cook"), id=list(labels=row.names(prgeng)))
+```
+most influential 
+
+```{r}
+dfbeta.prgeng<-dfbetas(reduced)
+
+# Get the absolute values of the dfbetas for each predictor
+abs_dfbeta.prgeng <- abs(dfbeta.prgeng)
+
+# Find the index (case number) of the max value in each column
+max_influence_case <- apply(abs_dfbeta.prgeng, 2, which.max)
+
+```
+As seen in the cooks disstance graph. This individual is influential, specifically within wkswrkd, powspuma
+
+
+
+
+```{r}
+newprgeng <- prgeng %>% 
+  filter(row.names(prgeng) != "4677")
+head(newprgeng)
+
+```
+```{r}
+reducedNew<-lm(wageinc~age+ educ+engl+occ+factor(sex)+wkswrkd+powspuma+birth, data =newprgeng)
+summary(reducedNew)
+```
+took it out. relationships look the same
 
